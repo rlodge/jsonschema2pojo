@@ -20,9 +20,12 @@ import org.jsonschema2pojo.rules.RuleFactory;
 
 import java.io.File;
 import java.io.FileFilter;
+import java.net.URI;
 import java.net.URL;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Defines the configuration options for Java type generation, including source
@@ -148,15 +151,15 @@ public interface GenerationConfig {
      *         generated Java types.
      */
     boolean isIncludeToString();
-    
+
     /**
      * Gets the 'toStringExcludes' configuration option.
      *
-     * @return An array of strings representing fields 
+     * @return An array of strings representing fields
      *         that should be excluded from toString methods
      */
     String[] getToStringExcludes();
- 
+
     /**
      * Gets the 'annotationStyle' configuration option.
      *
@@ -563,7 +566,7 @@ public interface GenerationConfig {
 
     /**
      * Gets the 'targetLanguage' configuration option.
-     * 
+     *
      * @return The type of code that will be generated.
      *         <p>
      *         Supported values:
@@ -591,5 +594,9 @@ public interface GenerationConfig {
     default boolean isUseInnerClassBuilders(){ return false;}
 
     default String getDeserializationClassProperty() {return "@class";}
+
+    default Map<String, String> getPreexistingTypeMapping(){return new HashMap<>();}
+
+    default Optional<URI> getBaseURI(){return Optional.empty();}
 
 }

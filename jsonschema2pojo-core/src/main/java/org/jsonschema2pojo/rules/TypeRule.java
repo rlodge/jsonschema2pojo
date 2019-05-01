@@ -13,19 +13,21 @@
 
 package org.jsonschema2pojo.rules;
 
-import static org.jsonschema2pojo.rules.PrimitiveTypes.*;
-import static org.jsonschema2pojo.util.TypeUtil.*;
-
-import java.math.BigDecimal;
-import java.math.BigInteger;
-
-import org.jsonschema2pojo.GenerationConfig;
-import org.jsonschema2pojo.Schema;
-
 import com.fasterxml.jackson.databind.JsonNode;
+import com.sun.codemodel.JClass;
 import com.sun.codemodel.JClassContainer;
 import com.sun.codemodel.JCodeModel;
 import com.sun.codemodel.JType;
+import org.jsonschema2pojo.GenerationConfig;
+import org.jsonschema2pojo.Schema;
+
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.net.URI;
+import java.util.Optional;
+
+import static org.jsonschema2pojo.rules.PrimitiveTypes.*;
+import static org.jsonschema2pojo.util.TypeUtil.*;
 
 /**
  * Applies the "type" schema rule.
@@ -75,17 +77,24 @@ public class TypeRule implements Rule<JClassContainer, JType> {
 
     JType type;
 
+    Optional<URI> maybeRelativeUri = relativizeId(Optional.ofNullable(schema));
     if (propertyTypeName.equals("object") || node.has("properties") && node.path("properties").size() > 0) {
 
       type = ruleFactory.getObjectRule().apply(nodeName, node, parent, jClassContainer.getPackage(), schema);
     } else if (node.has("existingJavaType")) {
-      String typeName = node.path("existingJavaType").asText();
+	    String typeName = node.path("existingJavaType").asText();
 
-      if (isPrimitive(typeName, jClassContainer.owner())) {
-        type = primitiveType(typeName, jClassContainer.owner());
-      } else {
-        type = resolveType(jClassContainer, typeName);
-      }
+	    if (isPrimitive(typeName, jClassContainer.owner())) {
+		    type = primitiveType(typeName, jClassContainer.owner());
+	    } else {
+		    type = resolveType(jClassContainer, typeName);
+	    }
+    } else if (maybeRelativeUri.isPresent() &&
+	    ruleFactory.getGenerationConfig().getPreexistingTypeMapping() != null &&
+	    ruleFactory.getGenerationConfig().getPreexistingTypeMapping().containsKey(maybeRelativeUri.get().toString())) {
+	    type = getExistingReferencedType(ruleFactory, jClassContainer, maybeRelativeUri.get().toString());
+    } else if (hasExistingTypeMapping(ruleFactory, node)) {
+	    type = getExistingReferencedType(ruleFactory, jClassContainer, node.get("$ref").asText());
     } else if (propertyTypeName.equals("string")) {
 
       type = jClassContainer.owner().ref(String.class);
@@ -114,6 +123,39 @@ public class TypeRule implements Rule<JClassContainer, JType> {
 
     return type;
   }
+
+	public static JClass getExistingReferencedType(final RuleFactory ruleFactory, final JClassContainer jClassContainer, final String ref) {
+		return resolveType(jClassContainer, ruleFactory.getGenerationConfig().getPreexistingTypeMapping().get(ref));
+	}
+
+	public static boolean hasExistingTypeMapping(final RuleFactory ruleFactory, final JsonNode node) {
+		return node.has("$ref") &&
+			ruleFactory.getGenerationConfig().getPreexistingTypeMapping() != null &&
+			ruleFactory.getGenerationConfig().getPreexistingTypeMapping().containsKey(node.get("$ref").asText());
+	}
+
+	@SuppressWarnings({"OptionalUsedAsFieldOrParameterType", "OptionalAssignedToNull"})
+	private Optional<URI> relativizeId(Optional<Schema> maybeSchema) {
+		return maybeSchema
+			.flatMap(schema -> Optional.ofNullable(schema.getId()))
+			.map(id -> {
+				if (id.isAbsolute()) {
+					Optional<URI> maybeBaseUri = ruleFactory.getGenerationConfig().getBaseURI();
+					if (maybeBaseUri == null) {
+						maybeBaseUri = Optional.empty();
+					}
+					return maybeBaseUri
+						.map(baseUri -> URI.create(id.toString().replace(baseUri.toString(),"")))
+						.orElseGet(() -> URI.create(
+							id.toString().replaceAll(
+								"^(?:(?:[a-zA-Z][0-9a-zA-Z+\\-.]*:)?/{0,2}[0-9a-zA-Z;,/?:@&=+.\\-_!~*'()%]+?)([0-9a-zA-Z;,?:@&=+.\\-_!~*'()%]+)(#[0-9a-zA-Z;,/?:@&=+.\\-_!~*'()%]+)?$",
+								"$1$2"
+							))
+					);
+				}
+				return id;
+			});
+	}
 
   private String getTypeName(JsonNode node) {
     if (node.has("type") && node.get("type").isArray() && node.get("type").size() > 0) {

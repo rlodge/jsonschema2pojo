@@ -38,6 +38,7 @@ import org.jsonschema2pojo.util.URLUtil;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
+import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -45,6 +46,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Properties;
+import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.ArrayUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.*;
@@ -706,6 +710,15 @@ public class Jsonschema2PojoMojo extends AbstractMojo implements GenerationConfi
     private String customDateTimePattern;
 
     /**
+     * A base URI to remove from IDs when we relative them for checking preexistingTypeMapping.
+     * In a format like file:/${basedir}/src/main/resources/schema/
+     *
+     * @parameter property "jsonschema2pojo.baseUri"
+     * @since 0.4.33
+     */
+    private String baseURI;
+
+    /**
      * A custom pattern to use when formatting date-time fields during
      * serialization. Requires support from your JSON binding library.
      *
@@ -764,6 +777,14 @@ public class Jsonschema2PojoMojo extends AbstractMojo implements GenerationConfi
      * @since 1.0.0
      */
     private Map<String, String> formatTypeMapping = new HashMap<>();
+
+    /**
+     * @parameter property="jsonschema2pojo.preexistingTypeMapping"
+     *            default-value=""
+     * @since 1.0.0
+     */
+    private Properties preexistingTypeMapping = new Properties();
+    private Map<String,String> preexistingTypeMappingCache = null;
 
     /**
      * @parameter property="jsonschema2pojo.useInnerClassBuilders"
@@ -1203,4 +1224,33 @@ public class Jsonschema2PojoMojo extends AbstractMojo implements GenerationConfi
         return deserializationClassProperty;
     }
 
+    @Override
+    public Map<String, String> getPreexistingTypeMapping() {
+        if (preexistingTypeMappingCache == null) {
+            preexistingTypeMappingCache = preexistingTypeMapping.entrySet().stream()
+                .filter(entry -> entry.getKey() instanceof String && entry.getValue() instanceof String)
+                .collect(Collectors.toMap(
+                    (Map.Entry<Object, Object> e) -> (String)e.getKey(),
+                    (Map.Entry<Object, Object> e) -> (String)e.getValue()
+                ));
+        }
+        return preexistingTypeMappingCache;
+    }
+
+    @Override
+    public Optional<URI> getBaseURI() {
+        final Optional<URI> maybeUri = Optional.ofNullable(baseURI)
+            .flatMap(s -> {
+                if (isNotBlank(s)) {
+                    return Optional.of(URI.create(s));
+                } else {
+                    return Optional.empty();
+                }
+            });
+        if (maybeUri.isPresent()) {
+            return maybeUri;
+        }
+        return Optional.ofNullable(sourceDirectory)
+            .map(s -> new File(s).toURI());
+    }
 }

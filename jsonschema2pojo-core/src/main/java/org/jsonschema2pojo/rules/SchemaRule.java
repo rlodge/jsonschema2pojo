@@ -86,6 +86,11 @@ public class SchemaRule implements Rule<JClassContainer, JType> {
     }
 
     private JType resolveRef(final String nodeName, JsonNode schemaNode, final JsonNode parent, final JClassContainer generatableType, Schema schema) {
+
+        if (TypeRule.hasExistingTypeMapping(ruleFactory, schemaNode)) {
+            return TypeRule.getExistingReferencedType(ruleFactory, generatableType, schemaNode.get("$ref").asText());
+        }
+
         final String nameFromRef = nameFromRef(schemaNode.get("$ref").asText());
 
         schema = ruleFactory.getSchemaStore().create(schema, schemaNode.get("$ref").asText(), ruleFactory.getGenerationConfig().getRefFragmentPathDelimiters());
