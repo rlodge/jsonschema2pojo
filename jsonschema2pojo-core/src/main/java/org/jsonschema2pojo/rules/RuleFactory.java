@@ -33,7 +33,6 @@ import com.sun.codemodel.JFieldVar;
 import com.sun.codemodel.JPackage;
 import com.sun.codemodel.JType;
 import org.jsonschema2pojo.util.ReflectionHelper;
-import sun.reflect.Reflection;
 
 /**
  * Provides factory/creation methods for the code generation rules.
@@ -124,6 +123,24 @@ public class RuleFactory {
      */
     public Rule<JPackage, JType> getObjectRule() {
         return new ObjectRule(this, new ParcelableHelper(), reflectionHelper);
+    }
+
+    /**
+     * Provides a rule to handle allOf entries of objects
+     *
+     * @return a schema rule to handle allOf entries of objects
+     */
+    public Rule<JDefinedClass, JDefinedClass> getAllOfRule() {
+        return new AllOfRule(this);
+    }
+
+    /**
+     * Provides a rule to handle oneOf entries of objects
+     *
+     * @return a schema rule to handle oneOf entries of objects
+     */
+    public Rule<JClassContainer, JType> getOneOfRule() {
+        return new OneOfRule(this);
     }
 
     /**

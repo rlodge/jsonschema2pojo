@@ -17,6 +17,7 @@
 package org.jsonschema2pojo;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.sun.codemodel.JClass;
 import com.sun.codemodel.JDefinedClass;
 import com.sun.codemodel.JEnumConstant;
 import com.sun.codemodel.JFieldVar;
@@ -211,4 +212,7 @@ public interface Annotator {
     void additionalPropertiesField(JFieldVar field, JDefinedClass clazz, String propertyName);
 
 	boolean isPolymorphicDeserializationSupported(JsonNode node);
+
+	default void addJsonSubtypesAndTypeInfo(JClass superType, JClass subType, String propertyName){}
+
 }

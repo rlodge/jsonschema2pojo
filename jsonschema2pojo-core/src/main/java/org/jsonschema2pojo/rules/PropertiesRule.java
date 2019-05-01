@@ -16,10 +16,6 @@
 
 package org.jsonschema2pojo.rules;
 
-import java.util.Iterator;
-
-import org.jsonschema2pojo.Schema;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.sun.codemodel.JBlock;
@@ -28,6 +24,9 @@ import com.sun.codemodel.JExpr;
 import com.sun.codemodel.JMethod;
 import com.sun.codemodel.JType;
 import com.sun.codemodel.JVar;
+import org.jsonschema2pojo.Schema;
+
+import java.util.Iterator;
 
 /**
  * Applies the "properties" schema rule.
@@ -67,7 +66,10 @@ public class PropertiesRule implements Rule<JDefinedClass, JDefinedClass> {
         for (Iterator<String> properties = node.fieldNames(); properties.hasNext(); ) {
             String property = properties.next();
 
-            ruleFactory.getPropertyRule().apply(property, node.get(property), node, jclass, schema);
+            // Just ignore it . . .
+            if (!node.get(property).has("not")) {
+                ruleFactory.getPropertyRule().apply(property, node.get(property), node, jclass, schema);
+            }
         }
 
         if (ruleFactory.getGenerationConfig().isGenerateBuilders() && !jclass._extends().name().equals("Object")) {

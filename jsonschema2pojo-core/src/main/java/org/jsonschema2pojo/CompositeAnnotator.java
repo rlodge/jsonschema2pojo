@@ -17,6 +17,7 @@
 package org.jsonschema2pojo;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.sun.codemodel.JClass;
 import com.sun.codemodel.JDefinedClass;
 import com.sun.codemodel.JEnumConstant;
 import com.sun.codemodel.JFieldVar;
@@ -165,6 +166,13 @@ public class CompositeAnnotator implements Annotator {
     public void timeField(JFieldVar field, JDefinedClass clazz, JsonNode propertyNode) {
         for (Annotator annotator : annotators) {
             annotator.timeField(field, clazz, propertyNode);
+        }
+    }
+
+    @Override
+    public void addJsonSubtypesAndTypeInfo(final JClass superType, final JClass subType, final String propertyName) {
+        for (Annotator annotator : annotators) {
+            annotator.addJsonSubtypesAndTypeInfo(superType, subType, propertyName);
         }
     }
 }

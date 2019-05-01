@@ -16,17 +16,6 @@
 
 package org.jsonschema2pojo;
 
-import static org.apache.commons.lang3.StringUtils.*;
-
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.Set;
-
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.sun.codemodel.JAnnotationUse;
-import org.apache.commons.lang3.StringUtils;
-import org.jsonschema2pojo.rules.FormatRule;
-
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -36,15 +25,30 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.sun.codemodel.JAnnotationArrayMember;
+import com.sun.codemodel.JAnnotationUse;
+import com.sun.codemodel.JAnnotationValue;
+import com.sun.codemodel.JClass;
 import com.sun.codemodel.JDefinedClass;
 import com.sun.codemodel.JEnumConstant;
 import com.sun.codemodel.JFieldVar;
 import com.sun.codemodel.JMethod;
+import org.apache.commons.lang3.StringUtils;
+import org.jsonschema2pojo.rules.FormatRule;
+
+import java.lang.annotation.Annotation;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.function.Function;
+
+import static org.apache.commons.lang3.StringUtils.*;
 
 /**
  * Annotates generated Java types using the Jackson 2.x mapping annotations.
@@ -86,11 +90,33 @@ public class Jackson2Annotator extends AbstractTypeInfoAwareAnnotator {
 
     @Override
     public void propertyOrder(JDefinedClass clazz, JsonNode propertiesNode) {
-        JAnnotationArrayMember annotationValue = clazz.annotate(JsonPropertyOrder.class).paramArray("value");
+        final JAnnotationUse jsonPropertyOrder = createAnnotation(clazz, JsonPropertyOrder.class);
+        JAnnotationArrayMember annotationValue = getAnnotationValue(jsonPropertyOrder, "value", jsonPropertyOrder::paramArray);
 
         for (Iterator<String> properties = propertiesNode.fieldNames(); properties.hasNext();) {
             annotationValue.param(properties.next());
         }
+    }
+
+    private <A extends JAnnotationValue> A getAnnotationValue(final JAnnotationUse annotationUse, final String valueName, final Function<String, A> producer) {
+        A annotationValue = null;
+        try {
+            if (annotationUse.getAnnotationMembers().containsKey(valueName)) {
+                //noinspection unchecked
+                annotationValue = (A) annotationUse.getAnnotationMembers().get(valueName);
+            }
+        } catch (NullPointerException e) {
+            // there doesn't appear to be any way for us to get it SAFELY
+        }
+        if (annotationValue == null) {
+            annotationValue = producer.apply(valueName);
+        }
+        return annotationValue;
+    }
+
+    private JAnnotationUse createAnnotation(final JDefinedClass clazz, final Class<? extends Annotation> annotationClass) {
+        return clazz.annotations().stream().filter(use -> use.getAnnotationClass().name().equals(annotationClass.getSimpleName())).findFirst()
+            .orElseGet(() -> clazz.annotate(annotationClass));
     }
 
     @Override
@@ -215,6 +241,21 @@ public class Jackson2Annotator extends AbstractTypeInfoAwareAnnotator {
         if (pattern != null && !field.type().fullName().equals("java.lang.String")) {
             field.annotate(JsonFormat.class).param("shape", JsonFormat.Shape.STRING).param("pattern", pattern).param("timezone", timezone);
         }
+    }
+
+    @Override
+    public void addJsonSubtypesAndTypeInfo(JClass superType, JClass subType, String propertyName) {
+	    final JAnnotationUse annotation = createAnnotation((JDefinedClass) superType, JsonTypeInfo.class);
+	    annotation.param("use", JsonTypeInfo.Id.NAME);
+	    annotation.param("include", JsonTypeInfo.As.PROPERTY);
+	    annotation.param("property", propertyName);
+	    annotation.param("visible", true);
+
+	    final JAnnotationUse subtypesAnnotation = createAnnotation((JDefinedClass)superType, JsonSubTypes.class);
+	    JAnnotationArrayMember annotationValue = getAnnotationValue(subtypesAnnotation, "value", subtypesAnnotation::paramArray);
+	    final JAnnotationUse typeAnnotation = annotationValue.annotate(JsonSubTypes.Type.class);
+	    typeAnnotation.param("value", subType);
+	    typeAnnotation.param("name", subType.name());
     }
 
     protected void addJsonTypeInfoAnnotation(JDefinedClass jclass, String propertyName) {

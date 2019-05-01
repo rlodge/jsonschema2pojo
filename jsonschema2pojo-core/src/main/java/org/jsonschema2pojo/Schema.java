@@ -16,10 +16,10 @@
 
 package org.jsonschema2pojo;
 
-import java.net.URI;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.sun.codemodel.JType;
+
+import java.net.URI;
 
 /**
  * A JSON Schema document.

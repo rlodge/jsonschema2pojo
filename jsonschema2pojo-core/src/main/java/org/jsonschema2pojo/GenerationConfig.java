@@ -16,13 +16,13 @@
 
 package org.jsonschema2pojo;
 
+import org.jsonschema2pojo.rules.RuleFactory;
+
 import java.io.File;
 import java.io.FileFilter;
 import java.net.URL;
 import java.util.Iterator;
 import java.util.Map;
-
-import org.jsonschema2pojo.rules.RuleFactory;
 
 /**
  * Defines the configuration options for Java type generation, including source
@@ -589,5 +589,7 @@ public interface GenerationConfig {
      * @return whether to include the gang of four builder patter on the generated classes. The default value for this is false.
      */
     default boolean isUseInnerClassBuilders(){ return false;}
+
+    default String getDeserializationClassProperty() {return "@class";}
 
 }

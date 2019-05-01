@@ -16,20 +16,6 @@
 
 package org.jsonschema2pojo.maven;
 
-import static org.apache.commons.lang3.ArrayUtils.isEmpty;
-import static org.apache.commons.lang3.StringUtils.*;
-
-import java.io.File;
-import java.io.FileFilter;
-import java.io.IOException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-
 import org.apache.commons.io.FilenameUtils;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.AbstractMojo;
@@ -48,6 +34,20 @@ import org.jsonschema2pojo.SourceSortOrder;
 import org.jsonschema2pojo.SourceType;
 import org.jsonschema2pojo.rules.RuleFactory;
 import org.jsonschema2pojo.util.URLUtil;
+
+import java.io.File;
+import java.io.FileFilter;
+import java.io.IOException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+import static org.apache.commons.lang3.ArrayUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.*;
 
 /**
  * When invoked, this goal reads one or more
@@ -706,6 +706,15 @@ public class Jsonschema2PojoMojo extends AbstractMojo implements GenerationConfi
     private String customDateTimePattern;
 
     /**
+     * A custom pattern to use when formatting date-time fields during
+     * serialization. Requires support from your JSON binding library.
+     *
+     * @parameter property "jsonschema2pojo.deserializationClassProperty" default-value="@class"
+     * @since 0.4.33
+     */
+    private String deserializationClassProperty = "@class";
+
+    /**
      * A string containing any characters that should act as path delimiters when resolving $ref fragments.
      * By default, #, / and . are used in an attempt to support JSON Pointer and JSON Path.
      *
@@ -1188,4 +1197,10 @@ public class Jsonschema2PojoMojo extends AbstractMojo implements GenerationConfi
     public boolean isUseInnerClassBuilders() {
         return useInnerClassBuilders;
     }
+
+    @Override
+    public String getDeserializationClassProperty() {
+        return deserializationClassProperty;
+    }
+
 }

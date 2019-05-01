@@ -1,12 +1,12 @@
 /**
  * Copyright © 2010-2017 Nokia
- *
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,22 +16,21 @@
 
 package org.jsonschema2pojo.rules;
 
-import static org.apache.commons.lang3.StringUtils.*;
-
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
-
+import com.fasterxml.jackson.databind.JsonNode;
+import com.sun.codemodel.JClassContainer;
+import com.sun.codemodel.JType;
 import org.jsonschema2pojo.Jsonschema2Pojo;
 import org.jsonschema2pojo.Schema;
 import org.jsonschema2pojo.exception.GenerationException;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.sun.codemodel.JClassContainer;
-import com.sun.codemodel.JType;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+
+import static org.apache.commons.lang3.StringUtils.*;
 
 /**
  * Applies a JSON schema.
- * 
+ *
  * @see <a
  *      href="http://tools.ietf.org/html/draft-zyp-json-schema-03#section-5">http://tools.ietf.org/html/draft-zyp-json-schema-03#section-5</a>
  */
@@ -56,24 +55,21 @@ public class SchemaRule implements Rule<JClassContainer, JType> {
      * as a URL (from which content will be read). Where the ref URI has been
      * encountered before, the root Java type created by that schema will be
      * re-used (generation steps won't be repeated).
-     * 
+     *
      * @param schema
      *            the schema within which this schema rule is being applied
      */
     @Override
-    public JType apply(String nodeName, JsonNode schemaNode, JsonNode parent, JClassContainer generatableType, Schema schema) {
+    public JType apply(String nodeName, final JsonNode schemaNode, JsonNode parent, JClassContainer generatableType, Schema schema) {
+	    if (schemaNode.has("$ref")) {
+            return resolveRef(nodeName, schemaNode, parent, generatableType, schema);
+        }
 
-        if (schemaNode.has("$ref")) {
-            final String nameFromRef = nameFromRef(schemaNode.get("$ref").asText());
-
-            schema = ruleFactory.getSchemaStore().create(schema, schemaNode.get("$ref").asText(), ruleFactory.getGenerationConfig().getRefFragmentPathDelimiters());
-            schemaNode = schema.getContent();
-
-            if (schema.isGenerated()) {
-                return schema.getJavaType();
+	    if (schemaNode.has("oneOf")) {
+	        if (schemaNode.has("properties") || schemaNode.has("allOf")) {
+	            throw new IllegalArgumentException("Sorry, we only support oneOf as the only defining thing in a schema.");
             }
-
-            return apply(nameFromRef != null ? nameFromRef : nodeName, schemaNode, parent, generatableType, schema);
+	        return ruleFactory.getOneOfRule().apply(nodeName, schemaNode.get("oneOf"), parent, generatableType, schema);
         }
 
         schema = schema.deriveChildSchema(schemaNode);
@@ -88,13 +84,26 @@ public class SchemaRule implements Rule<JClassContainer, JType> {
 
         return javaType;
     }
-    
+
+    private JType resolveRef(final String nodeName, JsonNode schemaNode, final JsonNode parent, final JClassContainer generatableType, Schema schema) {
+        final String nameFromRef = nameFromRef(schemaNode.get("$ref").asText());
+
+        schema = ruleFactory.getSchemaStore().create(schema, schemaNode.get("$ref").asText(), ruleFactory.getGenerationConfig().getRefFragmentPathDelimiters());
+        schemaNode = schema.getContent();
+
+        if (schema.isGenerated()) {
+            return schema.getJavaType();
+        }
+
+        return apply(nameFromRef != null ? nameFromRef : nodeName, schemaNode, parent, generatableType, schema);
+    }
+
     private String nameFromRef(String ref) {
-        
+
         if ("#".equals(ref)) {
             return null;
         }
-        
+
         String nameFromRef;
         if (!contains(ref, "#")) {
             nameFromRef = Jsonschema2Pojo.getNodeName(ref, ruleFactory.getGenerationConfig());
@@ -102,7 +111,7 @@ public class SchemaRule implements Rule<JClassContainer, JType> {
             String[] nameParts = split(ref, "/\\#");
             nameFromRef = nameParts[nameParts.length - 1];
         }
-        
+
         try {
             return URLDecoder.decode(nameFromRef, "utf-8");
         } catch (UnsupportedEncodingException e) {
