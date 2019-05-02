@@ -41,11 +41,13 @@ import org.jsonschema2pojo.util.ParcelableHelper;
 import org.jsonschema2pojo.util.ReflectionHelper;
 import org.jsonschema2pojo.util.SerializableHelper;
 
+import java.net.URI;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.apache.commons.lang3.StringUtils.*;
@@ -116,8 +118,22 @@ public class ObjectRule implements Rule<JPackage, JType> {
 
         ruleFactory.getPropertiesRule().apply(nodeName, node.get("properties"), node, jclass, schema);
 
+        @SuppressWarnings("ConstantConditions")
+        final Optional<URI> maybeRelativeId = TypeRule.relativizeId(ruleFactory, Optional.ofNullable(schema));
         if (node.has("javaInterfaces")) {
             addInterfaces(jclass, node.get("javaInterfaces"));
+        } else if (maybeRelativeId.isPresent() && ruleFactory.getGenerationConfig().getInterfaceMapping() != null &&
+            ruleFactory.getGenerationConfig().getInterfaceMapping().containsKey(maybeRelativeId.get().toString())) {
+            addInterfaces(jclass, ruleFactory.getGenerationConfig().getInterfaceMapping().get(maybeRelativeId.get().toString()));
+        } else if (ruleFactory.getGenerationConfig().getCommonInterfaces() != null && ruleFactory.getGenerationConfig().getCommonInterfaces().size() > 0) {
+            addInterfaces(jclass, ruleFactory.getGenerationConfig().getCommonInterfaces());
+        }
+
+        if (jclass._extends().fullName().equals("java.lang.Object") && maybeRelativeId.isPresent() && ruleFactory.getGenerationConfig().getSupertypeMapping() != null &&
+            ruleFactory.getGenerationConfig().getSupertypeMapping().containsKey(maybeRelativeId.get().toString())) {
+            jclass._extends(resolveType(_package, ruleFactory.getGenerationConfig().getSupertypeMapping().get(maybeRelativeId.get().toString())));
+        } else if (jclass._extends().fullName().equals("java.lang.Object") && isNotBlank(ruleFactory.getGenerationConfig().getCommonSupertype())) {
+            jclass._extends(resolveType(_package, ruleFactory.getGenerationConfig().getCommonSupertype()));
         }
 
         ruleFactory.getAdditionalPropertiesRule().apply(nodeName, node.get("additionalProperties"), node, jclass, schema);
@@ -509,6 +525,12 @@ public class ObjectRule implements Rule<JPackage, JType> {
     private void addInterfaces(JDefinedClass jclass, JsonNode javaInterfaces) {
         for (JsonNode i : javaInterfaces) {
             jclass._implements(resolveType(jclass._package(), i.asText()));
+        }
+    }
+
+    private void addInterfaces(JDefinedClass jclass, Iterable<String> javaInterfaces) {
+        for (String i : javaInterfaces) {
+            jclass._implements(resolveType(jclass._package(), i));
         }
     }
 

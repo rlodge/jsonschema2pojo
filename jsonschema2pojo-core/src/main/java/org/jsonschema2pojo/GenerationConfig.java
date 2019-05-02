@@ -24,6 +24,7 @@ import java.net.URI;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -596,6 +597,14 @@ public interface GenerationConfig {
     default String getDeserializationClassProperty() {return "@class";}
 
     default Map<String, String> getPreexistingTypeMapping(){return new HashMap<>();}
+
+    default String getCommonSupertype(){return null;}
+
+    default List<String> getCommonInterfaces(){return null;}
+
+    default Map<String, String> getSupertypeMapping(){return null;}
+
+    default Map<String, List<String>> getInterfaceMapping(){return null;}
 
     default Optional<URI> getBaseURI(){return Optional.empty();}
 

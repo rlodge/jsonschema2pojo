@@ -23,7 +23,6 @@ import com.sun.codemodel.JType;
 import org.jsonschema2pojo.Schema;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
@@ -71,9 +70,7 @@ public class OneOfRule implements Rule<JClassContainer, JType> {
 					final Set<JClass> classHierarchy = new LinkedHashSet<>();
 					getClassHierarchy((JClass) refType, classHierarchy);
 					getInterfaces((JClass) refType, classHierarchy);
-					final List<JClass> listClasses = new ArrayList<>(classHierarchy);
-					Collections.reverse(listClasses);
-					return listClasses;
+					return (List<JClass>)new ArrayList<>(classHierarchy);
 				})
 				.reduce((l, r) -> {
 					l.retainAll(r);

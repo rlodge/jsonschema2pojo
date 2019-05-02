@@ -77,7 +77,7 @@ public class TypeRule implements Rule<JClassContainer, JType> {
 
     JType type;
 
-    Optional<URI> maybeRelativeUri = relativizeId(Optional.ofNullable(schema));
+    Optional<URI> maybeRelativeUri = relativizeId(ruleFactory, Optional.ofNullable(schema));
     if (propertyTypeName.equals("object") || node.has("properties") && node.path("properties").size() > 0) {
 
       type = ruleFactory.getObjectRule().apply(nodeName, node, parent, jClassContainer.getPackage(), schema);
@@ -135,7 +135,7 @@ public class TypeRule implements Rule<JClassContainer, JType> {
 	}
 
 	@SuppressWarnings({"OptionalUsedAsFieldOrParameterType", "OptionalAssignedToNull"})
-	private Optional<URI> relativizeId(Optional<Schema> maybeSchema) {
+	static Optional<URI> relativizeId(final RuleFactory ruleFactory, Optional<Schema> maybeSchema) {
 		return maybeSchema
 			.flatMap(schema -> Optional.ofNullable(schema.getId()))
 			.map(id -> {

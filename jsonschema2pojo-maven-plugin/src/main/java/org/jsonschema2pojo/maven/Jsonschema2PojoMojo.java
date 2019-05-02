@@ -47,7 +47,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.ArrayUtils.isEmpty;
@@ -783,7 +782,7 @@ public class Jsonschema2PojoMojo extends AbstractMojo implements GenerationConfi
      *            default-value=""
      * @since 1.0.0
      */
-    private Properties preexistingTypeMapping = new Properties();
+    private List<TypeMapping> preexistingTypeMapping = new ArrayList<>();
     private Map<String,String> preexistingTypeMappingCache = null;
 
     /**
@@ -792,6 +791,36 @@ public class Jsonschema2PojoMojo extends AbstractMojo implements GenerationConfi
      * @since 1.0.0
      */
     private boolean useInnerClassBuilders = false;
+
+    /**
+     * @parameter property="jsonschema2pojo.commonSupertype"
+     *            default-value=""
+     * @since 1.0.0
+     */
+    private String commonSupertype = null;
+
+    /**
+     * @parameter property="jsonschema2pojo.commonInterfaces"
+     *            default-value=""
+     * @since 1.0.0
+     */
+    private List<String> commonInterfaces = new ArrayList<>();
+
+    /**
+     * @parameter property="jsonschema2pojo.superclassMapping"
+     *            default-value=""
+     * @since 1.0.0
+     */
+    private List<TypeMapping> superclassMapping = new ArrayList<>();
+    private Map<String,String> superclassMappingCache = null;
+
+    /**
+     * @parameter property="jsonschema2pojo.interfaceMapping"
+     *            default-value=""
+     * @since 1.0.0
+     */
+    private List<MultiTypeMapping> interfaceMapping = new ArrayList<>();
+    private Map<String,List<String>> interfaceMappingCache = null;
 
     /**
      * Executes the plugin, to read the given source and behavioural properties
@@ -1227,11 +1256,10 @@ public class Jsonschema2PojoMojo extends AbstractMojo implements GenerationConfi
     @Override
     public Map<String, String> getPreexistingTypeMapping() {
         if (preexistingTypeMappingCache == null) {
-            preexistingTypeMappingCache = preexistingTypeMapping.entrySet().stream()
-                .filter(entry -> entry.getKey() instanceof String && entry.getValue() instanceof String)
+            preexistingTypeMappingCache = preexistingTypeMapping.stream()
                 .collect(Collectors.toMap(
-                    (Map.Entry<Object, Object> e) -> (String)e.getKey(),
-                    (Map.Entry<Object, Object> e) -> (String)e.getValue()
+                    TypeMapping::getSchemaId,
+                    TypeMapping::getClassName
                 ));
         }
         return preexistingTypeMappingCache;
@@ -1253,4 +1281,39 @@ public class Jsonschema2PojoMojo extends AbstractMojo implements GenerationConfi
         return Optional.ofNullable(sourceDirectory)
             .map(s -> new File(s).toURI());
     }
+
+    @Override
+    public String getCommonSupertype() {
+        return commonSupertype;
+    }
+
+    @Override
+    public List<String> getCommonInterfaces() {
+        return commonInterfaces;
+    }
+
+    @Override
+    public Map<String, String> getSupertypeMapping() {
+	    if (superclassMappingCache == null) {
+		    superclassMappingCache = superclassMapping.stream()
+			    .collect(Collectors.toMap(
+				    TypeMapping::getSchemaId,
+				    TypeMapping::getClassName
+			    ));
+	    }
+	    return superclassMappingCache;
+    }
+
+    @Override
+    public Map<String, List<String>> getInterfaceMapping() {
+	    if (interfaceMappingCache == null) {
+		    interfaceMappingCache = interfaceMapping.stream()
+			    .collect(Collectors.toMap(
+				    MultiTypeMapping::getSchemaId,
+				    MultiTypeMapping::getClassNames
+			    ));
+	    }
+	    return interfaceMappingCache;
+	}
+
 }
