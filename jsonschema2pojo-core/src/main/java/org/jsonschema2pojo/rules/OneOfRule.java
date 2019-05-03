@@ -27,6 +27,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * A simple interpretation of allOf rules.  It doesn't reflect the full expressive capacity of JSON schema.  It does:
@@ -55,7 +56,7 @@ public class OneOfRule implements Rule<JClassContainer, JType> {
 				throw new IllegalArgumentException("We only handle 'oneOf' as a list of refs pointing to the same superclass");
 			}
 
-			final Optional<List<JClass>> reduce = elements.stream()
+			final List<JClass> classesInOneOf = elements.stream()
 				.map(element -> {
 					final SchemaNodePair resolvedRef = resolveRefs(new SchemaNodePair(element, currentSchema, Optional.empty()));
 					JType refType;
@@ -67,19 +68,33 @@ public class OneOfRule implements Rule<JClassContainer, JType> {
 					if (!(refType instanceof JClass)) {
 						throw new IllegalArgumentException("We don't know what to do with oneOf lists that don't resolve to JClass entities");
 					}
+					return (JClass) refType;
+				})
+				.collect(Collectors.toList());
+
+			final Optional<List<JClass>> reduce = classesInOneOf.stream()
+				.map(refType -> {
 					final Set<JClass> classHierarchy = new LinkedHashSet<>();
-					getClassHierarchy((JClass) refType, classHierarchy);
-					getInterfaces((JClass) refType, classHierarchy);
-					return (List<JClass>)new ArrayList<>(classHierarchy);
+					getClassHierarchy(refType, classHierarchy);
+					getInterfaces(refType, classHierarchy);
+					return (List<JClass>) new ArrayList<>(classHierarchy);
 				})
 				.reduce((l, r) -> {
 					l.retainAll(r);
 					return l;
 				});
+
+			final JClass determinedSuperclass;
 			if (reduce.isPresent() && reduce.get().size() > 0) {
-				return reduce.get().get(0);
+				determinedSuperclass = reduce.get().get(0);
+			} else {
+				throw new IllegalArgumentException("Couldn't find any common superclasses");
 			}
-			throw new IllegalArgumentException("Couldn't find any common superclasses");
+			classesInOneOf
+				.forEach(refType -> {
+					ruleFactory.getAnnotator().addJsonSubtypesAndTypeInfo(determinedSuperclass, refType, ruleFactory.getGenerationConfig().getDeserializationClassProperty());
+				});
+			return determinedSuperclass;
 		}
 
 		throw new IllegalArgumentException("We don't know what to do with oneOfs that aren't arrays or are null");

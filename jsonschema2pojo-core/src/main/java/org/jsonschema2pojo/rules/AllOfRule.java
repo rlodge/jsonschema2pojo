@@ -80,7 +80,6 @@ public class AllOfRule implements Rule<JDefinedClass, JDefinedClass> {
 	private void handleExtension(final JDefinedClass jClass, final SchemaNodePair resolvedRef) {
 		final JClass superClass = (JClass) resolvedRef.refSchema.get().getJavaType();
 		jClass._extends(superClass);
-		ruleFactory.getAnnotator().addJsonSubtypesAndTypeInfo(superClass, jClass, ruleFactory.getGenerationConfig().getDeserializationClassProperty());
 	}
 
 	private void handleElement(final String nodeName, final JsonNode node, final JDefinedClass jClass, final Schema currentSchema, final JsonNode element) {
