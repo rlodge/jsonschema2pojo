@@ -823,6 +823,13 @@ public class Jsonschema2PojoMojo extends AbstractMojo implements GenerationConfi
     private Map<String,List<String>> interfaceMappingCache = null;
 
     /**
+     * @parameter property="jsonschema2pojo.abstractSchemaTypes"
+     *            default-value=""
+     * @since 1.0.0
+     */
+    private List<String> abstractSchemaTypes = new ArrayList<>();
+
+    /**
      * Executes the plugin, to read the given source and behavioural properties
      * and generate POJOs. The current implementation acts as a wrapper around
      * the command line interface.
@@ -1316,4 +1323,8 @@ public class Jsonschema2PojoMojo extends AbstractMojo implements GenerationConfi
 	    return interfaceMappingCache;
 	}
 
+	@Override
+    public List<String> getAbstractSchemaTypes() {
+        return abstractSchemaTypes;
+    }
 }

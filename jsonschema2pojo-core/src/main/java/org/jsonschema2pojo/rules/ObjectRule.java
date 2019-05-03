@@ -88,9 +88,11 @@ public class ObjectRule implements Rule<JPackage, JType> {
             return superType;
         }
 
+        final Optional<URI> maybeRelativeId = TypeRule.relativizeId(ruleFactory, Optional.ofNullable(schema));
+
         JDefinedClass jclass;
         try {
-            jclass = createClass(nodeName, node, _package);
+            jclass = createClass(nodeName, node, _package, maybeRelativeId);
         } catch (ClassAlreadyExistsException e) {
             return e.getExistingClass();
         }
@@ -118,8 +120,6 @@ public class ObjectRule implements Rule<JPackage, JType> {
 
         ruleFactory.getPropertiesRule().apply(nodeName, node.get("properties"), node, jclass, schema);
 
-        @SuppressWarnings("ConstantConditions")
-        final Optional<URI> maybeRelativeId = TypeRule.relativizeId(ruleFactory, Optional.ofNullable(schema));
         if (node.has("javaInterfaces")) {
             addInterfaces(jclass, node.get("javaInterfaces"));
         } else if (maybeRelativeId.isPresent() && ruleFactory.getGenerationConfig().getInterfaceMapping() != null &&
@@ -199,13 +199,14 @@ public class ObjectRule implements Rule<JPackage, JType> {
      * @param _package
      *            the package which may contain a new class after this method
      *            call
+     * @param maybeRelativeId
      * @return a reference to a newly created class
      * @throws ClassAlreadyExistsException
      *             if the given arguments cause an attempt to create a class
      *             that already exists, either on the classpath or in the
      *             current map of classes to be generated.
      */
-    private JDefinedClass createClass(String nodeName, JsonNode node, JPackage _package) throws ClassAlreadyExistsException {
+    private JDefinedClass createClass(String nodeName, JsonNode node, JPackage _package, final Optional<URI> maybeRelativeId) throws ClassAlreadyExistsException {
 
         JDefinedClass newType;
 
@@ -223,7 +224,13 @@ public class ObjectRule implements Rule<JPackage, JType> {
                 throw new ClassAlreadyExistsException(existingClass);
             }
 
-            boolean usePolymorphicDeserialization = annotator.isPolymorphicDeserializationSupported(node);
+            int mods = JMod.PUBLIC;
+
+            if (maybeRelativeId.isPresent() &&
+                ruleFactory.getGenerationConfig().getAbstractSchemaTypes() != null &&
+                ruleFactory.getGenerationConfig().getAbstractSchemaTypes().contains(maybeRelativeId.get().toString())) {
+                mods = mods | JMod.ABSTRACT;
+            }
 
             if (node.has("javaType")) {
                 String fqn = node.path("javaType").asText();
@@ -241,17 +248,9 @@ public class ObjectRule implements Rule<JPackage, JType> {
                     fqn = fqn.substring(0, index) + ruleFactory.getGenerationConfig().getClassNamePrefix() + fqn.substring(index) + ruleFactory.getGenerationConfig().getClassNameSuffix();
                 }
 
-                if (usePolymorphicDeserialization) {
-                    newType = _package.owner()._class(JMod.PUBLIC, fqn, ClassType.CLASS);
-                } else {
-                    newType = _package.owner()._class(fqn);
-                }
+                newType = _package.owner()._class(mods, fqn, ClassType.CLASS);
             } else {
-                if (usePolymorphicDeserialization) {
-                    newType = _package._class(JMod.PUBLIC, ruleFactory.getNameHelper().getUniqueClassName(nodeName, node, _package), ClassType.CLASS);
-                } else {
-                    newType = _package._class(ruleFactory.getNameHelper().getUniqueClassName(nodeName, node, _package));
-                }
+                newType = _package._class(mods, ruleFactory.getNameHelper().getUniqueClassName(nodeName, node, _package), ClassType.CLASS);
             }
         } catch (JClassAlreadyExistsException e) {
             throw new ClassAlreadyExistsException(e.getExistingClass());

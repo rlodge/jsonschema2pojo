@@ -608,4 +608,6 @@ public interface GenerationConfig {
 
     default Optional<URI> getBaseURI(){return Optional.empty();}
 
+    default List<String> getAbstractSchemaTypes(){return null;}
+
 }

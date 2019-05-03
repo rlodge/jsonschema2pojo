@@ -247,7 +247,7 @@ public class Jackson2Annotator extends AbstractTypeInfoAwareAnnotator {
     public void addJsonSubtypesAndTypeInfo(JClass superType, JClass subType, String propertyName) {
 	    final JAnnotationUse annotation = createAnnotation((JDefinedClass) superType, JsonTypeInfo.class);
 	    annotation.param("use", JsonTypeInfo.Id.NAME);
-	    annotation.param("include", JsonTypeInfo.As.PROPERTY);
+	    annotation.param("include", JsonTypeInfo.As.EXISTING_PROPERTY);
 	    annotation.param("property", propertyName);
 	    annotation.param("visible", true);
 
