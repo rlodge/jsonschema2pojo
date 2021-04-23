@@ -163,7 +163,8 @@ public class Jackson2Annotator extends AbstractTypeInfoAwareAnnotator {
 
     @Override
     public void enumCreatorMethod(JDefinedClass _enum, JMethod creatorMethod) {
-        creatorMethod.annotate(JsonCreator.class);
+        final JAnnotationUse creator = creatorMethod.annotate(JsonCreator.class);
+        creator.param("mode", JsonCreator.Mode.DELEGATING);
     }
 
     @Override
